@@ -1,5 +1,5 @@
 {
-  "name": "My Drumkit",
-  "baseUrl": "https://your-project.pages.dev",
+  "name": "Test SGP drumkit",
+  "baseUrl": "https://drumkit-6nh.pages.dev/",
   "audioExtensions": [".flac", ".wav", ".mp3", ".ogg", ".aiff", ".aif", ".opus", ".m4a"]
 }
