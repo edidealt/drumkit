@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>drumkit — webdav</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0a0a0a;
+      --surface: #111;
+      --border:  #222;
+      --dim:     #444;
+      --muted:   #666;
+      --text:    #ccc;
+      --bright:  #eee;
+      --white:   #f5f5f5;
+      --mono:    'IBM Plex Mono', monospace;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    body {
+      padding: 64px 32px 96px;
+      max-width: 740px;
+      margin: 0 auto;
+    }
+
+    /* ── header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 32px;
+      margin-bottom: 48px;
+    }
+
+    .kit-name {
+      font-size: 11px;
+      font-weight: 300;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--white);
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 300;
+    }
+
+    .url-pill {
+      display: inline-block;
+      margin-top: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      font-size: 12px;
+      color: var(--bright);
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      position: relative;
+      transition: border-color 0.15s;
+      user-select: all;
+    }
+
+    .url-pill:hover { border-color: var(--dim); }
+
+    .url-pill::after {
+      content: 'click to copy';
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      color: var(--muted);
+      pointer-events: none;
+      transition: opacity 0.15s;
+    }
+
+    .url-pill.copied { border-color: var(--text); }
+    .url-pill.copied::after { content: 'copied'; color: var(--text); }
+
+    /* ── tabs ── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 36px;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: none;
+      border: none;
+      border-bottom: 1px solid transparent;
+      margin-bottom: -1px;
+      cursor: pointer;
+      transition: color 0.1s;
+    }
+
+    .tab:hover { color: var(--text); }
+
+    .tab.active {
+      color: var(--white);
+      border-bottom-color: var(--white);
+    }
+
+    /* ── panels ── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── steps ── */
+    .step {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 0 16px;
+      margin-bottom: 28px;
+      align-items: start;
+    }
+
+    .step-num {
+      font-size: 10px;
+      color: var(--dim);
+      padding-top: 3px;
+      text-align: right;
+      font-weight: 300;
+    }
+
+    .step-body {}
+
+    .step-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--bright);
+      margin-bottom: 4px;
+      letter-spacing: 0.02em;
+    }
+
+    .step-desc {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 300;
+    }
+
+    .step-desc strong {
+      color: var(--text);
+      font-weight: 400;
+    }
+
+    /* ── code blocks ── */
+    .code-block {
+      margin-top: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--bright);
+      white-space: pre;
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .code-block .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--dim);
+      background: none;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      padding: 2px 4px;
+      transition: color 0.1s;
+    }
+
+    .code-block .copy-btn:hover { color: var(--muted); }
+    .code-block .copy-btn.copied { color: var(--text); }
+
+    /* ── note ── */
+    .note {
+      margin-top: 36px;
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+      font-size: 11px;
+      color: var(--dim);
+      font-weight: 300;
+      font-style: italic;
+    }
+
+    .note strong { font-weight: 400; font-style: normal; color: var(--muted); }
+
+    /* ── divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 32px 0;
+    }
+
+    /* ── footer ── */
+    footer {
+      margin-top: 64px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--dim);
+      font-weight: 300;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    footer a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    footer a:hover { color: var(--text); }
+
+    @media (max-width: 480px) {
+      body { padding: 40px 20px 64px; }
+      .url-pill::after { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="kit-name" id="kit-name">drumkit</div>
+    <h1 id="kit-title">loading...</h1>
+    <div class="subtitle">mount via webdav — read only</div>
+    <div class="url-pill" id="dav-url" onclick="copyUrl(this)">loading...</div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('macos', this)">macOS</button>
+    <button class="tab" onclick="switchTab('windows', this)">Windows</button>
+  </div>
+
+  <!-- macOS -->
+  <div class="panel active" id="panel-macos">
+
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-body">
+        <div class="step-label">Open Finder</div>
+        <div class="step-desc">
+          In the menu bar choose <strong>Go → Connect to Server</strong>,
+          or press <strong>⌘K</strong>.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-body">
+        <div class="step-label">Enter the server address</div>
+        <div class="step-desc">Paste the URL below into the address field.</div>
+        <div class="code-block" id="macos-url-block"><button class="copy-btn" onclick="copyBlock(this)">copy</button><span id="macos-url">loading...</span></div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-body">
+        <div class="step-label">Connect as Guest</div>
+        <div class="step-desc">
+          When prompted for credentials, select <strong>Connect as Guest</strong>.
+          No username or password is required.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-body">
+        <div class="step-label">Done</div>
+        <div class="step-desc">
+          The kit will appear in the Finder sidebar under <strong>Locations</strong>.
+          Files load on demand — nothing is downloaded to disk until opened.
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <div class="step">
+      <div class="step-num">alt</div>
+      <div class="step-body">
+        <div class="step-label">Mount via terminal</div>
+        <div class="step-desc">If you prefer the command line:</div>
+        <div class="code-block" id="macos-mount-block"><button class="copy-btn" onclick="copyBlock(this)">copy</button><span id="macos-mount">loading...</span></div>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>Note:</strong> macOS Finder re-issues PROPFIND requests each time
+      you open a folder. Performance is fine for a drum kit; for large libraries
+      consider using <strong>rclone mount</strong> instead.
+    </div>
+
+  </div>
+
+  <!-- Windows -->
+  <div class="panel" id="panel-windows">
+
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-body">
+        <div class="step-label">Open Map Network Drive</div>
+        <div class="step-desc">
+          Open <strong>File Explorer</strong>, right-click <strong>This PC</strong>
+          in the sidebar, and choose <strong>Map network drive…</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-body">
+        <div class="step-label">Choose a drive letter and enter the address</div>
+        <div class="step-desc">
+          Pick any free drive letter. In the <strong>Folder</strong> field paste:
+        </div>
+        <div class="code-block" id="win-url-block"><button class="copy-btn" onclick="copyBlock(this)">copy</button><span id="win-url">loading...</span></div>
+        <div class="step-desc" style="margin-top:8px">
+          Check <strong>Reconnect at sign-in</strong> if you want it to persist across reboots.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-body">
+        <div class="step-label">Connect anonymously</div>
+        <div class="step-desc">
+          When prompted for credentials, check
+          <strong>Connect using different credentials</strong> is <em>unchecked</em>,
+          or enter any placeholder username with a blank password.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-body">
+        <div class="step-label">Done</div>
+        <div class="step-desc">
+          The kit will appear as a drive in <strong>This PC</strong>.
+          Use it like any local folder inside your DAW.
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <div class="step">
+      <div class="step-num">fix</div>
+      <div class="step-body">
+        <div class="step-label">If Windows refuses to connect over HTTP</div>
+        <div class="step-desc">
+          Windows blocks WebDAV over plain HTTP by default.
+          This server uses HTTPS so it should work — but if you see an error,
+          open <strong>regedit</strong> and set:
+        </div>
+        <div class="code-block"><button class="copy-btn" onclick="copyBlock(this)">copy</button>HKLM\SYSTEM\CurrentControlSet\Services\WebClient\Parameters
+BasicAuthLevel = 2</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">alt</div>
+      <div class="step-body">
+        <div class="step-label">Mount via PowerShell</div>
+        <div class="step-desc">Run as Administrator:</div>
+        <div class="code-block" id="win-mount-block"><button class="copy-btn" onclick="copyBlock(this)">copy</button><span id="win-mount">loading...</span></div>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>Note:</strong> The Windows WebDAV client (WebClient service) must be
+      running. Open <strong>services.msc</strong> and confirm
+      <strong>WebClient</strong> is started. Set it to
+      <strong>Automatic</strong> to start with Windows.
+    </div>
+
+  </div>
+
+  <footer>
+    <span id="footer-name">drumkit</span>
+    <span>read-only webdav · no auth required</span>
+  </footer>
+
+  <script>
+    // Load config and populate all URL placeholders
+    fetch('/config.json')
+      .then(r => r.json())
+      .then(cfg => {
+        const url  = (cfg.baseUrl ?? window.location.origin).replace(/\/$/, '');
+        const name = cfg.name ?? 'drumkit';
+
+        document.getElementById('kit-name').textContent    = name.toLowerCase();
+        document.getElementById('kit-title').textContent   = name;
+        document.getElementById('footer-name').textContent = name.toLowerCase();
+        document.title = name.toLowerCase() + ' — webdav';
+
+        document.getElementById('dav-url').textContent    = url;
+        document.getElementById('macos-url').textContent  = url;
+        document.getElementById('win-url').textContent    = url;
+
+        document.getElementById('macos-mount').textContent =
+          `mkdir -p ~/mnt/${name.toLowerCase()}\nmount_webdav ${url} ~/mnt/${name.toLowerCase()}`;
+
+        document.getElementById('win-mount').textContent =
+          `net use Z: "${url}" /persistent:yes`;
+      })
+      .catch(() => {
+        // fallback to current origin
+        const url = window.location.origin;
+        ['dav-url','macos-url','win-url'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = url;
+        });
+        document.getElementById('kit-title').textContent = 'drumkit';
+        document.getElementById('macos-mount').textContent =
+          `mkdir -p ~/mnt/drumkit\nmount_webdav ${url} ~/mnt/drumkit`;
+        document.getElementById('win-mount').textContent =
+          `net use Z: "${url}" /persistent:yes`;
+      });
+
+    function switchTab(id, btn) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-' + id).classList.add('active');
+    }
+
+    function copyUrl(el) {
+      const text = el.textContent.trim();
+      navigator.clipboard.writeText(text).then(() => {
+        el.classList.add('copied');
+        setTimeout(() => el.classList.remove('copied'), 1800);
+      });
+    }
+
+    function copyBlock(btn) {
+      const block = btn.parentElement;
+      const span  = block.querySelector('span');
+      const text  = span ? span.textContent : block.innerText.replace('copy','').trim();
+      navigator.clipboard.writeText(text.trim()).then(() => {
+        btn.textContent = 'done';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1800);
+      });
+    }
+  </script>
+
+</body>
+</html>
